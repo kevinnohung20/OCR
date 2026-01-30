@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const tesseract = require('node-tesseract-ocr');
-const sharp = require('sharp');  ← ADD
+const sharp = require('sharp');
 
 const app = express();
 const upload = multer({ dest: '/tmp/' });
