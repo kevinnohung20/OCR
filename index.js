@@ -1,48 +1,37 @@
-const express = require('express');
-const multer = require('multer');
-const tesseract = require('node-tesseract-ocr');
-const sharp = require('sharp');
-
-const app = express();
-const upload = multer({ dest: '/tmp/' });
-
-app.post('/ocr', upload.single('file'), async (req, res) => {
+app.post('/captcha', upload.single('file'), async (req, res) => {
   try {
-    const lang = req.query.lang || 'vie';
+    // CAPTCHA preprocessing pipeline
+    const processedPath = `/tmp/captcha_${req.file.filename}.png`;
     
-    // PREPROCESSING cho CAPTCHA/normal text
-    const processedPath = `/tmp/processed_${req.file.filename}.png`;
     await sharp(req.file.path)
-      .greyscale()                    // Chuyển grayscale
-      .normalize()                   // Tăng contrast
-      .blur(0.3)                     // Giảm noise nhẹ
-      .threshold(128)                // Binarize (đen trắng)
-      .resize(800)                   // Scale up để dễ đọc
-      .png()                         // Convert PNG cho Tesseract
+      // 1. Morphological operations cho CAPTCHA
+      .raw()
+      .ensureAlpha()
+      .removeAlpha()  // Remove transparency
+      .greyscale()
+      .negate()       // Đảo màu (text trắng, bg đen)
+      .blur(0.8)      // Heavy blur để smooth curves
+      .threshold(140) // Aggressive threshold
+      .resize(1200, 80, {  // Stretch horizontally
+        kernel: sharp.kernel.lanczos3,
+        withoutEnlargement: false
+      })
+      .png()
       .toFile(processedPath);
 
-    // OCR với config tối ưu
     const text = await tesseract.recognize(processedPath, {
-      lang: lang,
-      tessedit_pageseg_mode: '6',    // Single block text (CAPTCHA)
-      tessedit_char_whitelist: lang === 'vie' 
-        ? '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹ' 
-        : '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+      lang: 'eng',  // CAPTCHA thường chỉ Latin chars
+      tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+      tessedit_pageseg_mode: '8',  // Single word/line
+      tessedit_single_match: '1'
     });
 
     res.json({ 
       text: text.trim(),
-      lang: lang,
-      original: req.file.filename,
-      processed: processedPath,
-      confidence: 'improved'
+      captcha_mode: true,
+      processed: processedPath
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-});
-
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`OCR API with preprocessing running on port ${PORT}`);
 });
