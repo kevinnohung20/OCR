@@ -6,7 +6,7 @@ const sharp = require('sharp');  ← ADD
 const app = express();
 const upload = multer({ dest: '/tmp/' });
 
-app.post('/', upload.single('file'), async (req, res) => {
+app.post('/ocr', upload.single('file'), async (req, res) => {
   try {
     const lang = req.query.lang || 'vie';
     
