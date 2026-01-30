@@ -11,12 +11,11 @@ WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-RUN npm install
+RUN npm install --production
 
 # Copy source code
 COPY . .
 
 EXPOSE 8080
 
-# Start Node.js server (long-running process)
 CMD ["node", "index.js"]
