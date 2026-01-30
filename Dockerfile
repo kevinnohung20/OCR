@@ -1,18 +1,22 @@
-FROM ubuntu:22.04
+FROM node:18-slim
 
-# Install Tesseract và dependencies
+# Install Tesseract
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-eng \
     tesseract-ocr-vie \
-    libtesseract-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /data
+WORKDIR /app
 
-# Expose port nếu bạn build API service
+# Copy package files
+COPY package*.json ./
+RUN npm install
+
+# Copy source code
+COPY . .
+
 EXPOSE 8080
 
-# Default command
-CMD ["tesseract", "--version"]
+# Start Node.js server (long-running process)
+CMD ["node", "index.js"]
